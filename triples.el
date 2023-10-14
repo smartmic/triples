@@ -71,11 +71,13 @@ The transaction will abort if an error is thrown."
   "Rebuild the builtin database DB.
 This is used in upgrades and when problems are detected."
   (triples-with-transaction
-      db
-      (sqlite-execute db "ALTER TABLE triples RENAME TO triples_old")
-      (triples-setup-table-for-builtin db)
-      (sqlite-execute db "INSERT INTO triples (subject, predicate, object, properties) SELECT DISTINCT subject, predicate, object, properties FROM triples_old")
-      (sqlite-execute db "DROP TABLE triples_old")))
+    db
+    (sqlite-execute db "CREATE TABLE IF NOT EXISTS triples_new(subject NOT NULL, predicate TEXT NOT NULL, object NOT NULL, properties TEXT NOT NULL)")
+    (sqlite-execute db "INSERT INTO triples_new (subject, predicate, object, properties) SELECT DISTINCT subject, predicate, object, properties FROM triples")
+    (sqlite-execute db "DROP TABLE triples")
+    (sqlite-execute db "ALTER TABLE triples_new RENAME TO triples")
+    ;; set up also new indices
+    (triples-setup-table-for-builtin db)))
 
 (defun triples-maybe-upgrade-to-builtin (db)
   "Check to see if DB needs to be upgraded from emacsql to builtin."
